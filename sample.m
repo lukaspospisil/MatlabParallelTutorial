@@ -8,15 +8,16 @@ h = 2e-2;
 disp(['Number of evaluations (work to do): ' num2str(size(X,1)*size(X,2))])
 
 %% SEQUENTIAL
-FXY_Sequential = zeros(size(X));
-tStartSequential = tic;
+FXY_Sequential = zeros(size(X)); % here store the results
+
 disp('-> solving sequential problem')
+tStartSequential = tic; % start to measure time
 for i=1:size(FXY_Sequential,1)
     for j=1:size(FXY_Sequential,2)
         FXY_Sequential(i,j) = evaluate_something(X(i,j),Y(i,j));
     end
 end
-timeSequential = toc(tStartSequential);
+timeSequential = toc(tStartSequential); % stop to measure time
 
 %% PARALLEL
 numOfWorkers = 8; % number of parallel processes
@@ -45,16 +46,22 @@ localsize = ceil(globalsize/numOfWorkers);
 
 % separate data
 for proc=1:numOfWorkers
-    idxparallel{proc} = (proc-1)*localsize+1:min(proc*localsize,globalsize); % compute local indexes
+    % compute local indexes
+    % however, be sure that indexes will not exceed max index of data 
+    idxparallel{proc} = (proc-1)*localsize+1:min(proc*localsize,globalsize); 
+    
+    % set local portion of data
     Xparallel{proc} = Xvec(idxparallel{proc});
     Yparallel{proc} = Yvec(idxparallel{proc});
-    FXYparallel{proc} = zeros(length(idxparallel{proc}),1); % initialize
+    
+    % initialize space for results
+    FXYparallel{proc} = zeros(length(idxparallel{proc}),1);
 end
 
 % run in parallel
-tStartParallel = tic;
 disp('-> solving parallel problem')
-parfor proc=1:numOfWorkers
+tStartParallel = tic; % start to measure time
+parfor proc=1:numOfWorkers % run in parallel
     % process local portion of work
     for idxlocal=1:length(idxparallel{proc});
         FXYparallel{proc}(idxlocal) = evaluate_something(Xparallel{proc}(idxlocal),Yparallel{proc}(idxlocal));
@@ -68,7 +75,7 @@ for proc=1:numOfWorkers
     FXYvec(idxparallel{proc}) = FXYparallel{proc};
 end
 
-% back to matrix
+% results back to matrix
 FXY_Parallel = reshape(FXYvec,size(X));
 
 % finalize parallel environment
@@ -89,5 +96,5 @@ FXY = FXY_Parallel; % what to plot
 figure
 hold on
 mesh(X,Y,FXY)
-
 hold off
+
